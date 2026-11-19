@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#080808" />
+  <title>PUG & CAT // MONSTER CHAT</title>
+  <style>
+    :root {
+      --bg: #080808;
+      --surface: #121212;
+      --border: #ffffff;
+      --text: #ffffff;
+      --muted: #888888;
+      --accent: #ff2a4b;
+      --claw-green: #39ff14;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Courier New', Courier, monospace; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #paw-loader {
+      position: fixed;
+      inset: 0;
+      background: #000000;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    #paw-loader.active { opacity: 1; pointer-events: all; }
+    #paw-svg {
+      width: 220px;
+      height: 280px;
+      transform: translateY(100%);
+      transition: transform 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+    #paw-loader.active #paw-svg { transform: translateY(15%); }
+    .loader-text {
+      position: absolute;
+      top: 25%;
+      font-size: 1.2rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      border: 2px solid #fff;
+      padding: 8px 16px;
+      background: #000;
+    }
+
+    .monster-box {
+      background: var(--surface);
+      border: 2px solid var(--border);
+      position: relative;
+      clip-path: polygon(0 8px, 8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px));
+    }
+    .monster-btn {
+      background: #fff;
+      color: #000;
+      border: 2px solid #fff;
+      padding: 10px 16px;
+      font-weight: bold;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: 0.1s;
+      clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+    }
+    .monster-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .monster-btn.dark { background: #000; color: #fff; }
+    .monster-btn.dark:hover { background: #222; }
+
+    input, select {
+      background: #000;
+      border: 2px solid #fff;
+      color: #fff;
+      padding: 10px;
+      width: 100%;
+      outline: none;
+    }
+
+    #auth-screen {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      padding: 20px;
+    }
+    .auth-card { width: 100%; max-width: 380px; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+
+    #app-screen { display: none; flex-direction: column; height: 100vh; }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      border-bottom: 2px solid #fff;
+      background: #000;
+    }
+
+    nav { display: flex; border-bottom: 2px solid #fff; background: #000; }
+    .tab-btn {
+      flex: 1;
+      padding: 12px;
+      background: #000;
+      color: #fff;
+      border: none;
+      border-right: 1px solid #444;
+      font-weight: bold;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+    .tab-btn.active { background: #fff; color: #000; }
+
+    .tab-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      animation: monsterJaw 0.16s cubic-bezier(0.2, 0.9, 0.3, 1);
+    }
+    .tab-content.active { display: flex; flex-direction: column; }
+
+    @keyframes monsterJaw {
+      0% { transform: scaleY(0.1) skewX(-6deg); opacity: 0; }
+      100% { transform: scaleY(1) skewX(0); opacity: 1; }
+    }
+
+    #messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px; }
+    .msg {
+      max-width: 80%;
+      padding: 10px 14px;
+      border: 2px solid #fff;
+      background: #111;
+      align-self: flex-start;
+    }
+    .msg.mine { align-self: flex-end; background: #fff; color: #000; }
+    .msg-header { font-size: 0.75rem; font-weight: bold; margin-bottom: 4px; display: flex; align-items: center; gap: 5px; }
+    .badge {
+      display: inline-block;
+      background: var(--claw-green);
+      color: #000;
+      padding: 1px 5px;
+      font-size: 0.7rem;
+      font-weight: bold;
+    }
+    .msg.mine .badge { background: #000; color: var(--claw-green); }
+
+    .chat-input-bar { display: flex; gap: 8px; padding-top: 10px; border-top: 2px solid #fff; }
+    .stickers-bar { display: flex; gap: 8px; padding: 8px 0; }
+    .sticker-btn { background: #111; border: 1px solid #fff; color: #fff; padding: 4px 10px; cursor: pointer; font-size: 1.1rem; }
+
+    .user-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border: 1px solid #fff;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .admin-actions { display: flex; gap: 6px; }
+    .admin-actions button { padding: 4px 8px; font-size: 0.75rem; }
+
+    #warn-banner {
+      display: none;
+      background: var(--accent);
+      color: #fff;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+      border-bottom: 2px solid #fff;
+    }
+    #ban-screen {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: #000;
+      z-index: 9998;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="paw-loader">
+    <div class="loader-text">ЗАГРУЗКА...</div>
+    <svg id="paw-svg" viewBox="0 0 200 260">
+      <rect x="45" y="110" width="110" height="160" rx="50" fill="#ffffff" stroke="#000" stroke-width="6"/>
+      <ellipse cx="100" cy="145" rx="34" ry="26" fill="#080808"/>
+      <circle cx="55" cy="95" r="18" fill="#ffffff" stroke="#080808" stroke-width="5"/>
+      <circle cx="85" cy="75" r="19" fill="#ffffff" stroke="#080808" stroke-width="5"/>
+      <circle cx="115" cy="75" r="19" fill="#ffffff" stroke="#080808" stroke-width="5"/>
+      <circle cx="145" cy="95" r="18" fill="#ffffff" stroke="#080808" stroke-width="5"/>
+      <polygon points="55,77 50,60 60,77" fill="#fff"/>
+      <polygon points="85,56 82,38 89,56" fill="#fff"/>
+      <polygon points="115,56 112,38 119,56" fill="#fff"/>
+      <polygon points="145,77 142,60 150,77" fill="#fff"/>
+    </svg>
+  </div>
+
+  <div id="ban-screen">
+    <h1 style="color: var(--accent); font-size: 2rem; margin-bottom: 12px;">ВЫ ЗАБАНЕНЫ</h1>
+    <p>Администратор заблокировал вам доступ в стаю Мопса и Кота.</p>
+  </div>
+
+  <div id="auth-screen">
+    <div class="monster-box auth-card">
+      <h2 style="text-align:center;">🐾 PUG & CAT CHAT</h2>
+      <p style="font-size:0.8rem; color:var(--muted); text-align:center;">Черно-белый монстр-мессенджер</p>
+      <input type="text" id="nick-input" placeholder="Твой никнейм" />
+      <select id="pet-select">
+        <option value="🐶">Аватар: Черно-белый Мопс 🐶</option>
+        <option value="🐱">Аватар: Черный Кот 🐱</option>
+      </select>
+      <input type="email" id="email-input" placeholder="Email" />
+      <input type="password" id="pass-input" placeholder="Пароль (от 6 символов)" />
+      <button class="monster-btn" onclick="loginOrRegister()">ВОЙТИ / СОЗДАТЬ АККАУНТ</button>
+      <p id="auth-error" style="color:var(--accent); font-size:0.8rem;"></p>
+    </div>
+  </div>
+
+  <div id="app-screen">
+    <div id="warn-banner">⚠️ ВНИМАНИЕ! У вас есть предупреждения от администратора: <span id="warn-count">0</span></div>
+    <header>
+      <div><strong>🐾 PUG & CAT</strong></div>
+      <div id="user-badge-header" style="font-size:0.85rem;"></div>
+    </header>
+
+    <nav>
+      <button class="tab-btn active" onclick="switchTab('chat-tab', this)">💬 ЧАТ</button>
+      <button class="tab-btn" onclick="switchTab('profile-tab', this)">🐺 ПРОФИЛЬ</button>
+      <button class="tab-btn" id="admin-tab-btn" style="display:none; color:var(--claw-green);" onclick="switchTab('admin-tab', this)">⚡ АДМИНКА</button>
+    </nav>
+
+    <div id="chat-tab" class="tab-content active">
+      <div id="messages"></div>
+      <div class="stickers-bar">
+        <button class="sticker-btn" onclick="sendSticker('🐶 *ГАВ-МОНСТР!*')">🐶 Гав</button>
+        <button class="sticker-btn" onclick="sendSticker('🐱 *МЯУ-КОГОТЬ!*')">🐱 Мяу</button>
+        <button class="sticker-btn" onclick="sendSticker('🐾 *ЛАПА ОДОБРЯЕТ*')">🐾 Лапа</button>
+        <button class="sticker-btn" onclick="sendSticker('💀 *КУСЬ!*')">💀 Кусь</button>
+      </div>
+      <div class="chat-input-bar">
+        <input type="text" id="msg-input" placeholder="Написать в логово..." onkeydown="if(event.key==='Enter') sendMessage()" />
+        <button class="monster-btn" onclick="sendMessage()">➤</button>
+      </div>
+    </div>
+
+    <div id="profile-tab" class="tab-content">
+      <div class="monster-box" style="padding:16px; display:flex; flex-direction:column; gap:10px;">
+        <h3>Твоя карточка монстра</h3>
+        <div id="profile-info"></div>
+        <button class="monster-btn dark" onclick="logout()">ВЫЙТИ ИЗ АККАУНТА</button>
+      </div>
+    </div>
+
+    <div id="admin-tab" class="tab-content">
+      <h3 style="margin-bottom:10px;">Управление стаей (Админ-панель)</h3>
+      <div id="users-list"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://gstatic.com";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://gstatic.com";
